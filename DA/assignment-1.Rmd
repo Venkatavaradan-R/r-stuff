@@ -1,0 +1,313 @@
+---
+title: "PES University, Bengaluru"
+author: "UE18CS312 – Data Analytics"
+date: "Worksheet 1 (for Unit 1)"
+output:
+  pdf_document: default
+  prettydoc::html_pretty:
+    theme: architect
+    highlight: github
+---
+
+```{r setup, include=FALSE}
+library(tidyverse)
+library(here)
+library(GGally)
+library(moments)
+library(corrplot)
+library(ggbiplot)
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_knit$set(global.par = TRUE)
+```
+
+```{r, include=FALSE}
+par(mar=c(15,5,1,1))
+```
+
+`Submitted by: Venkatavaradan R` <br>
+`SRN: PES2201800462` <br>
+`Branch: CSE` <br>
+`Section: E` <br>
+
+### 1. Loading the dataset
+
+```{r}
+bkb<-read.csv(here::here("data","BKB.csv"),stringsAsFactors = FALSE)
+bkb<-tibble(bkb)
+```
+
+### 2. Summary of the data
+
+```{r}
+bkb %>% summary()
+```
+
+#### Creating numeric df
+
+```{r}
+bkb_num<-bkb %>%
+  select_if(is.numeric)%>%
+  select(-Applicant.ID)
+```
+
+### 3. Boxplot
+
+```{r, out.width="100%"}
+bkb_num %>%
+  boxplot(las=2)
+```
+<br>
+<br>
+We can clearly see that there are many outliers present for savings account, down payment and emi affordable. Lets dive deeper and find out the count.
+
+#### finding count of outliers
+
+```{r}
+bkb_num %>%
+     select(Balance.in.Savings.Account,Down.Payment,EMI.Affordable) %>% 
+      map(~ boxplot.stats(.x)$out)%>% 
+      map(~ length(.x))
+```
+
+### 4. Histogram + density plot 
+(bin width = 15)
+
+```{r}
+bkb_num %>%
+  ggplot(aes(Loan.Amount.Requested))+
+  geom_histogram(aes(y=..density..),bins=15,fill="white",color="black")+
+  geom_density(fill = "cornflowerblue", alpha=0.5)
+```
+(bin width = 50)
+
+```{r}
+bkb_num %>%
+  ggplot(aes(Loan.Amount.Requested))+
+  geom_histogram(aes(y=..density..),bins=50,fill="white",color="black")+
+  geom_density(fill = "cornflowerblue", alpha=0.5)
+```
+
+A barchart will be suitable for visualization of Loan Amount Variable 
+
+### 5. Hypothesis Testing
+
+Suppose the mean weight of King Penguins found in an Antarctic colony last year was
+15.4 kg. In a sample of 35 penguins at the same time this year in the same colony, the
+mean penguin weight is 14.6 kg. Assume the population standard deviation is 2.5 kg.
+At .05 significance level, can we reject the null hypothesis that the mean penguin
+weight does not differ from last year?
+
+
+
+H0 : Mean weight of penguins do not differ from last year.
+HA : Mean weight of penguins differs from last year.
+
+Since no of observations > 30, we will use Z-test instead of T-test.
+
+```{r}
+st_err = 2.5/(35**0.5)
+z = (14.6-15.4)/st_err
+pnorm(z)*2
+```
+
+Since p>0.05, we reject H0 , thus at 0.05 significance level we reject null hypothesis
+and accept the alternate hypothesis that Mean weight of penguins differ from last year.
+
+
+### 6. Accomodation type Visualization - Pie 
+#### Creating a tibble with accomodation name and count grouped by Accomodation Type
+
+```{r}
+accomodation_details<-bkb%>%
+  select(Accomodation.Type)%>%
+  group_by(Accomodation.Type)%>%
+  count()
+```
+
+#### Plotting the graph
+
+```{r, include=FALSE}
+par(mar=c(1,1,1,1))
+```
+
+
+```{r}
+
+t <- table(bkb$Accomodation.Type)
+piepercent <- t*100/(sum(t))
+pie(table(bkb$Accomodation.Type),
+labels=round(piepercent,digits=3),col = rainbow(length(t)))
+legend("topright", c("Company
+Provided","Family
+Other","Owned","Rented"), cex= 0.8, fill =
+rainbow(length(t)))
+
+```
+
+### 7. Gender type Visualization - Bar 
+
+```{r}
+bkb%>%
+  ggplot(aes(Gender))+
+  geom_bar(fill="black",color="white")+
+  ggtitle("Male vs Female")+
+  xlab("Sex")+
+  ylab("Count")
+```
+
+
+### 8. Monthly Salaries wrt EMI - scatter
+
+```{r}
+bkb_num%>%
+  ggplot(aes(Monthly.Salary,EMI.Affordable))+
+  geom_point()
+```
+
+When the Monthly salary is less, the Loan Amount is also less and is perfectly manageable to pay the EMIs. There are also outliers that lie in both directions where either EMI is too high or Salary is way higher when compared to EMI rate.
+
+
+#### pairplots
+
+```{r}
+# bkb_num%>%
+#   ggpairs()
+
+pairs(bkb_num)
+
+```
+
+### 9. Descriptive statistics for Salary
+
+```{r}
+mean(bkb_num$Monthly.Salary)
+median(bkb_num$Monthly.Salary)
+range(bkb_num$Monthly.Salary)
+sd(bkb_num$Monthly.Salary)
+
+bkb_num%>%
+  mutate(
+    Monthly.Salary = as.factor(Monthly.Salary)
+  )%>%
+  select(Monthly.Salary)%>%
+  group_by(Monthly.Salary)%>%
+  count()%>%
+  ungroup()%>%
+  top_n(1)
+```
+
+
+
+### 10. Salary analytics
+#### mean monthly salary for females
+
+```{r}
+q10a<-bkb%>%
+  select(Monthly.Salary,Gender)%>%
+  filter(Gender=="Female")
+mean(q10a$Monthly.Salary)
+```
+
+#### median monthly salary for males
+
+```{r}
+q10b<-bkb%>%
+  select(Monthly.Salary,Gender)%>%
+  filter(Gender=="Male")
+median(q10b$Monthly.Salary)
+```
+
+### 11. Monthly salaries grouped by the Gender
+
+#### mean
+
+```{r}
+bkb%>%
+  select(Monthly.Salary,Gender)%>%
+  group_by(Gender)%>%
+  summarize_at(vars(Monthly.Salary),list(mean))
+```
+#### median
+
+```{r}
+bkb%>%
+  select(Monthly.Salary,Gender)%>%
+  group_by(Gender)%>%
+  summarize_at(vars(Monthly.Salary),list(median))
+```
+#### range
+
+```{r}
+bkb%>%
+  select(Monthly.Salary,Gender)%>%
+  group_by(Gender)%>%
+  summarize_at(vars(Monthly.Salary),list(range))
+```
+
+### 12. Skewness and kurtosis for Monthly Salary
+
+
+```{r}
+
+skewness(bkb$Monthly.Salary)
+kurtosis(bkb$Monthly.Salary)
+```
+
+
+As observed from the histogram above and the values of skewness and kurtosis, we infer that
+Monthly Salary is Positively Skewed(Rightly Skewed) and LeptoKurtic -> Highly centered peak and
+has small tails.
+
+### 13. Correlation between Loan amount and Down payment
+
+
+```{r}
+bkb_num%>%
+  select(Loan.Amount.Requested,Down.Payment)%>%
+  cor()
+```
+
+### 14. Correlogram
+
+
+```{r}
+
+c <- cor(bkb_num)
+corrplot(c,method = 'color')
+
+```
+
+### 15. PCA
+
+
+```{r}
+pc <- prcomp(bkb_num,center = TRUE, scale = TRUE)
+
+pc%>%
+  summary()
+
+predict(pc)%>%
+  round(2)%>%
+  head()
+```
+
+### 16. PCA Visualization
+
+
+```{r}
+pc <- prcomp(bkb_num,center=TRUE, scale. = TRUE)
+ggbiplot(pc, obs.scale = 1, var.scale = 1, groups = bkb$Gender, ellipse = TRUE, circle = TRUE)+ scale_color_discrete(name = '') +
+theme(legend.direction = 'horizontal', legend.position = 'top')
+
+```
+
+
+
+
+
+
+
+
+
+
+
